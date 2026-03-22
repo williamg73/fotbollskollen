@@ -367,23 +367,49 @@ function jaccard(a, b) {
   return union === 0 ? 0 : inter / union;
 }
 
-// Patterns for articles that should never be shown
+// ── Article relevance filter — ONLY men's football/soccer ──
+
+// Must match at least one of these to be included
+const FOOTBALL_REQUIRED = [
+  /\bfootball\b/i, /\bsoccer\b/i, /\bfotboll\b/i,
+  /\bpremier\s+league\b/i, /\bla\s+liga\b/i, /\bserie\s+a\b/i,
+  /\bbundesliga\b/i, /\bligue\s+1\b/i, /\ballsvenskan\b/i,
+  /\bchampions\s+league\b/i, /\beuropa\s+league\b/i, /\bconference\s+league\b/i,
+  /\bworld\s+cup\b/i, /\beuro\s+20\d\d\b/i, /\bcopa\s+del\s+rey\b/i,
+  /\bfa\s+cup\b/i, /\bleague\s+cup\b/i, /\bcarabao\b/i,
+  /\bfifa\b/i, /\buefa\b/i, /\befl\b/i, /\bspfl\b/i,
+  /\bgoalkeeper\b/i, /\bstriker\b/i, /\bmidfielder\b/i, /\bdefender\b/i,
+  /\bfootballer\b/i, /\bmanager\b.*\b(club|sacked|appointed)\b/i,
+  // Major clubs
+  /\b(arsenal|chelsea|liverpool|man\s*(city|united|utd)|tottenham|newcastle|aston\s+villa|west\s+ham)\b/i,
+  /\b(real\s+madrid|barcelona|atletico|juventus|inter|ac\s+milan|napoli|psg|paris\s+saint|dortmund|bayern)\b/i,
+];
+
+// Explicitly forbidden — other sports or unwanted content
 const EXCLUDE_PATTERNS = [
+  // Other sports
+  /\bbasketball\b/i, /\bnba\b/i, /\bnfl\b/i, /\bnhl\b/i, /\bmlb\b/i,
+  /\bboxing\b/i, /\bmma\b/i, /\bufc\b/i, /\bwrestling\b/i,
+  /\btennis\b/i, /\bgolf\b/i, /\bcricket\b/i, /\brugby\b/i,
+  /\bbaseball\b/i, /\bamerican\s+football\b/i, /\bnfl\s+draft\b/i,
+  /\bcycling\b/i, /\bformula\s+[e1]\b/i, /\bf1\s+grand\s+prix\b/i,
+  /\bathletics\b/i, /\bswimming\b/i, /\bgymnastics\b/i,
   // Watch/stream guides
   /how\s+to\s+watch/i, /where\s+to\s+watch/i, /how\s+to\s+stream/i,
-  /watch\s+.{0,30}free/i, /stream\s+.{0,30}free/i,
-  /live\s+stream\s+free/i, /tv\s+channels?\s+and\s+stream/i,
-  /best\s+vpn/i, /watch\s+online/i, /watch\s+for\s+free/i,
-  /kick[\s-]?off\s+time.{0,20}tv/i,
+  /watch\s+.{0,30}free/i, /live\s+stream\s+free/i,
+  /best\s+vpn/i, /watch\s+for\s+free/i,
   // Women's football
-  /women'?s\s+(football|soccer|super\s+league|world\s+cup|champions\s+league|fa\s+cup)/i,
+  /women'?s\s+(football|soccer|super\s+league|world\s+cup|champions\s+league)/i,
   /\bwsl\b/i, /\bnwsl\b/i, /women'?s\s+national\s+team/i,
-  /girls?\s+(football|soccer|team)/i, /féminin(e|es)?\b/i,
+  /girls?\s+(football|soccer|team)/i,
 ];
 
 function shouldExclude(article) {
   const text = `${article.title} ${article.description}`;
-  return EXCLUDE_PATTERNS.some(p => p.test(text));
+  // Must be about football AND must not match any exclusion pattern
+  const isFootball = FOOTBALL_REQUIRED.some(p => p.test(text));
+  const isBanned = EXCLUDE_PATTERNS.some(p => p.test(text));
+  return !isFootball || isBanned;
 }
 
 function deduplicateAndMerge(articles) {
