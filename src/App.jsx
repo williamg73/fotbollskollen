@@ -367,6 +367,25 @@ function jaccard(a, b) {
   return union === 0 ? 0 : inter / union;
 }
 
+// Patterns for articles that should never be shown
+const EXCLUDE_PATTERNS = [
+  // Watch/stream guides
+  /how\s+to\s+watch/i, /where\s+to\s+watch/i, /how\s+to\s+stream/i,
+  /watch\s+.{0,30}free/i, /stream\s+.{0,30}free/i,
+  /live\s+stream\s+free/i, /tv\s+channels?\s+and\s+stream/i,
+  /best\s+vpn/i, /watch\s+online/i, /watch\s+for\s+free/i,
+  /kick[\s-]?off\s+time.{0,20}tv/i,
+  // Women's football
+  /women'?s\s+(football|soccer|super\s+league|world\s+cup|champions\s+league|fa\s+cup)/i,
+  /\bwsl\b/i, /\bnwsl\b/i, /women'?s\s+national\s+team/i,
+  /girls?\s+(football|soccer|team)/i, /féminin(e|es)?\b/i,
+];
+
+function shouldExclude(article) {
+  const text = `${article.title} ${article.description}`;
+  return EXCLUDE_PATTERNS.some(p => p.test(text));
+}
+
 function deduplicateAndMerge(articles) {
   // Sort newest first so the freshest version wins each group
   articles.sort((a, b) => { try { return new Date(b.createdAt) - new Date(a.createdAt); } catch { return 0; } });
@@ -403,7 +422,7 @@ function deduplicateAndMerge(articles) {
 // Phase 1 — fast: fetch RSS + deduplicate, no translation, no images
 async function fetchRawArticles() {
   const results = await Promise.allSettled(RSS_FEEDS.map(fetchRssFeed));
-  const articles = results.filter(r => r.status === "fulfilled").flatMap(r => r.value);
+  const articles = results.filter(r => r.status === "fulfilled").flatMap(r => r.value).filter(a => !shouldExclude(a));
   if (!articles.length) throw new Error("Kunde inte hämta nyheter från någon källa. Kontrollera din internetanslutning.");
   return deduplicateAndMerge(articles).map((a, i) => cleanArticle(a, i));
 }
